@@ -8,7 +8,6 @@ import (
 )
 
 func (s *Server) MapHandlers(ctx context.Context) error {
-
 	GRPCHandlers := deliveryGRPC.NewGRPCHandlers()
 	pb.RegisterChatV1Server(s.grpc, GRPCHandlers)
 

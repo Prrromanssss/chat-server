@@ -4,9 +4,10 @@ import (
 	"context"
 	"log"
 
-	pb "github.com/Prrromanssss/chat-server/pkg/chat_v1"
 	"github.com/brianvoe/gofakeit"
 	"google.golang.org/protobuf/types/known/emptypb"
+
+	pb "github.com/Prrromanssss/chat-server/pkg/chat_v1"
 )
 
 type GRPCHandlers struct {
@@ -29,12 +30,10 @@ func (h *GRPCHandlers) Delete(ctx context.Context, req *pb.DeleteRequest) (*empt
 	log.Printf("rpc Delete, request: %+v", req)
 
 	return &emptypb.Empty{}, nil
-
 }
 
 func (h *GRPCHandlers) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*emptypb.Empty, error) {
 	log.Printf("rpc SendMessage, request: %+v", req)
 
 	return &emptypb.Empty{}, nil
-
 }

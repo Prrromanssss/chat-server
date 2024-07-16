@@ -9,8 +9,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Prrromanssss/chat-server/config"
 	"google.golang.org/grpc"
+
+	"github.com/Prrromanssss/chat-server/config"
 )
 
 type Server struct {
@@ -50,12 +51,17 @@ func (s *Server) Run(ctx context.Context, cancel context.CancelFunc) error {
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
-	<-quit
-	log.Println("Start graceful shutdown")
 
-	s.grpc.GracefulStop()
+	select {
+	case <-ctx.Done():
+		log.Println("Context cancelled, start graceful shutdown...")
+		s.grpc.GracefulStop()
+	case <-quit:
+		log.Println("Received signal, start graceful shutdown...")
+		s.grpc.GracefulStop()
+	}
+
 	log.Println("gRPC server exited properly")
-
 	cancel()
 
 	return nil

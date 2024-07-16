@@ -14,7 +14,7 @@ service ChatV1 {
 }
 
 message CreateRequest {
-    repeated string usernames = 1;
+    repeated string emails = 1;
 }
 
 message CreateResponse {
