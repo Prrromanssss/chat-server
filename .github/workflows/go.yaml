@@ -133,11 +133,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSHKEY }}
-          envs: REGISTRY,GITHUB_SHA
-          script: |
-            # Set up variables
-            TAG_NAME=$(echo $GITHUB_SHA | head -c7)
-            
+          envs: REGISTRY
+          script: |            
             # Login into Selectel Registry
             docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY
             
