@@ -8,10 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	configPath = "../../config-local.yaml"
-)
-
 type Config struct {
 	GRPC     Server   `validate:"required" yaml:"grpc"`
 	Postgres Database `validate:"required" yaml:"postgres"`
