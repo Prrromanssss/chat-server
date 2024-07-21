@@ -14,7 +14,7 @@ service ChatV1 {
 }
 
 message CreateRequest {
-    repeated string ids = 1;
+    repeated int64 ids = 1;
 }
 
 message CreateResponse {

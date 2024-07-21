@@ -3,8 +3,9 @@ module github.com/Prrromanssss/chat-server
 go 1.22.4
 
 require (
-	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/jmoiron/sqlx v1.4.0
+	github.com/lib/pq v1.10.9
 	github.com/pkg/errors v0.9.1
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2

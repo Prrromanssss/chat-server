@@ -7,6 +7,9 @@ import (
 
 	"github.com/Prrromanssss/chat-server/config"
 	"github.com/Prrromanssss/chat-server/internal/server"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -21,8 +24,25 @@ func main() {
 	}
 	log.Println("Config loaded")
 
+	connStr := fmt.Sprintf(
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		cfg.Postgres.Host,
+		cfg.Postgres.Port,
+		cfg.Postgres.User,
+		cfg.Postgres.Password,
+		cfg.Postgres.DBName,
+		cfg.Postgres.SSLMode,
+	)
+
+	db, err := sqlx.Connect("postgres", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	s := server.NewServer(
 		cfg,
+		db,
 	)
 
 	log.Printf(
