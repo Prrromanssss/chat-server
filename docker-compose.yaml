@@ -6,7 +6,7 @@ volumes:
 
 services:
   chat-server:
-    image: cr.selcloud.ru/slimshady/chat-server
+    image: cr.selcloud.ru/slimshady/chat-server:${CHAT_SERVER_TAG_NAME}
     restart: always
     depends_on:
       - chat-server-pg
@@ -25,7 +25,7 @@ services:
       - postgres_volume_local:/var/lib/postgresql/data
 
   chat-server-migrator:
-    image: cr.selcloud.ru/slimshady/chat-server-migrator
+    image: cr.selcloud.ru/slimshady/chat-server-migrator:${CHAT_SERVER_MIGRATOR_TAG_NAME}
     restart: on-failure
     environment:
       DB_HOST: chat-server-pg
