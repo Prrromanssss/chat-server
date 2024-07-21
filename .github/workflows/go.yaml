@@ -98,12 +98,14 @@ jobs:
           docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_MIGRATOR_NAME:$TAG_NAME -f migration.Dockerfile .
       
       - name: Copy Docker Compose File via SCP
-        run: |
-          echo ${{ secrets.SSHKEY }} > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-
-          scp -i ~/.ssh/id_rsa docker-compose.yaml ${{ secrets.SSH_USERNAME }}@${{ secrets.SERVER_HOST }}:
-
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          source: "docker-compose.yaml"
+          target: "~"
+          
   deploy:
     runs-on: ubuntu-latest
     needs: push-to-registry
