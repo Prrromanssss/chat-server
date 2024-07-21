@@ -6,9 +6,7 @@ volumes:
 
 services:
   chat-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: cr.selcloud.ru/slimshady/chat-server
     restart: always
     depends_on:
       - chat-server-pg
@@ -27,9 +25,7 @@ services:
       - postgres_volume_local:/var/lib/postgresql/data
 
   chat-server-migrator:
-    build:
-      context: .
-      dockerfile: migration.Dockerfile
+    image: cr.selcloud.ru/slimshady/chat-server-migrator
     restart: on-failure
     environment:
       DB_HOST: chat-server-pg
