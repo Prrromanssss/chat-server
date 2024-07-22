@@ -98,6 +98,17 @@ jobs:
           docker buildx create --use
           docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_MIGRATOR_NAME:$CHAT_SERVER_MIGRATOR_TAG_NAME -f migration.Dockerfile .
           echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> $GITHUB_ENV
+
+      - name: Save tag names as artifact
+        run: |
+          echo "CHAT_SERVER_TAG_NAME=${{ env.CHAT_SERVER_TAG_NAME }}" >> tag_names.env
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=${{ env.CHAT_SERVER_MIGRATOR_TAG_NAME }}" >> tag_names.env
+      
+      - name: Upload tag names artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tag-names
+          path: tag_names.env
         
       - name: Update .env file with tags
         run: |
@@ -127,14 +138,32 @@ jobs:
     needs: push-to-registry
 
     steps:
+      - name: Download tag names artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: tag-names
+          path: .
+
+      - name: Source tag names and export to environment
+        run: |
+          source tag_names.env
+          echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> $GITHUB_ENV
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> $GITHUB_ENV
+          export CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME
+          export CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME
+
       - name: Deploy to Selectel Cloud via SSH action
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSHKEY }}
-          envs: REGISTRY
-          script: |            
+          envs: REGISTRY, CHAT_SERVER_TAG_NAME, CHAT_SERVER_MIGRATOR_TAG_NAME
+          script: |
+            # Set up variables
+            echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> .env
+            echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> .env
+            
             # Login into Selectel Registry
             docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY
             
