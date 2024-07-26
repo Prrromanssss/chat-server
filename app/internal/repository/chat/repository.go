@@ -45,7 +45,12 @@ func (p *chatPGRepo) CreateChat(ctx context.Context, emails []string) (chatID in
 	if err != nil {
 		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.PrepareContext.queryCreateUser")
 	}
-	defer stmt.Close()
+
+	defer func() {
+		if stmtErr := stmt.Close(); stmtErr != nil {
+			log.Println(stmtErr)
+		}
+	}()
 
 	for _, email := range emails {
 		var userID int64
