@@ -22,7 +22,7 @@ func NewPGRepo(db *sqlx.DB) repository.ChatRepository {
 }
 
 // CreateChat creates a new chat and links participants to it.
-func (p *chatPGRepo) CreateChat(ctx context.Context, userIDs []int64) (chatID int64, err error) {
+func (p *chatPGRepo) CreateChat(ctx context.Context, emails []string) (chatID int64, err error) {
 	tx, err := p.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.BeginTxx")
@@ -37,6 +37,23 @@ func (p *chatPGRepo) CreateChat(ctx context.Context, userIDs []int64) (chatID in
 	err = tx.GetContext(ctx, &chatID, queryCreateChat)
 	if err != nil {
 		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.GetContext.queryCreateChat")
+	}
+
+	userIDs := make([]int64, len(emails))
+
+	stmt, err := tx.PrepareContext(ctx, queryCreateUser)
+	if err != nil {
+		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.PrepareContext.queryCreateUser")
+	}
+	defer stmt.Close()
+
+	for _, email := range emails {
+		var userID int64
+		err = stmt.QueryRowContext(ctx, email).Scan(&userID)
+		if err != nil {
+			return 0, errors.Wrap(err, "chatPGRepo.CreateUsers.QueryRowContext.Scan")
+		}
+		userIDs = append(userIDs, userID)
 	}
 
 	params := make([]models.LinkParticipantsToChat, len(userIDs))

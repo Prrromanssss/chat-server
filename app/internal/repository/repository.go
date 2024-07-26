@@ -8,8 +8,8 @@ import (
 
 // ChatRepository defines methods for managing chat operations.
 type ChatRepository interface {
-	// CreateChat creates a new chat with the given user IDs and returns the chat ID.
-	CreateChat(ctx context.Context, userIDs []int64) (chatID int64, err error)
+	// CreateChat creates a new chat with the given user emails and returns the chat ID.
+	CreateChat(ctx context.Context, emails []string) (chatID int64, err error)
 
 	// DeleteChat removes a chat identified by its chat ID.
 	DeleteChat(ctx context.Context, chatID int64) (err error)

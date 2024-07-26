@@ -29,4 +29,13 @@ const (
 		VALUES
 			($1, $2, $3);
 	`
+
+	queryCreateUser = `
+		INSERT INTO chats.users
+			(email)
+		VALUES
+			($1)
+		RETURNING
+			id;
+	`
 )

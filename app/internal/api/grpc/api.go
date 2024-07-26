@@ -28,7 +28,7 @@ func NewGRPCHandlers(repo repository.ChatRepository) pb.ChatV1Server {
 func (h *GRPCHandlers) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
 	log.Printf("rpc Create, request: %+v", req)
 
-	chatID, err := h.repo.CreateChat(ctx, req.Ids)
+	chatID, err := h.repo.CreateChat(ctx, req.Emails)
 	if err != nil {
 		return nil, err
 	}
