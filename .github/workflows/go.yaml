@@ -32,6 +32,8 @@ jobs:
   linter:
     name: lint
     runs-on: ubuntu-latest
+    needs: build-and-test
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
@@ -73,6 +75,7 @@ jobs:
 
   push-to-registry:
     runs-on: ubuntu-latest
+    needs: linter
 
     steps:
       - name: Checkout master
@@ -89,14 +92,14 @@ jobs:
         run: |
           CHAT_SERVER_TAG_NAME=$(echo $GITHUB_SHA | head -c7)
           docker buildx create --use
-          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_APP_NAME:$CHAT_SERVER_TAG_NAME -f Dockerfile .
+          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_APP_NAME:$CHAT_SERVER_TAG_NAME -f build/Dockerfile .
           echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> $GITHUB_ENV
       
       - name: Build and Push Migrator
         run: |
           CHAT_SERVER_MIGRATOR_TAG_NAME=$(echo $GITHUB_SHA | head -c7)
           docker buildx create --use
-          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_MIGRATOR_NAME:$CHAT_SERVER_MIGRATOR_TAG_NAME -f migration.Dockerfile .
+          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_MIGRATOR_NAME:$CHAT_SERVER_MIGRATOR_TAG_NAME -f build/migration.Dockerfile .
           echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> $GITHUB_ENV
 
       - name: Save tag names as artifact
@@ -121,7 +124,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSHKEY }}
-          source: "docker-compose.yaml"
+          source: "build/docker-compose.yaml"
           target: "~"
 
       - name: Copy Env File via SCP
@@ -165,7 +168,7 @@ jobs:
             echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> .env
             
             # Login into Selectel Registry
-            docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY
+            echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin $REGISTRY
             
             # Stop old container
             docker compose down

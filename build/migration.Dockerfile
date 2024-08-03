@@ -10,8 +10,8 @@ RUN chmod +x /bin/goose
 
 WORKDIR /root
 
-ADD app/internal/migrations/*.sql migrations/
-ADD migration.sh .
+ADD migrations/*.sql migrations/
+ADD build/migration.sh .
 ADD .env .
 
 RUN chmod +x migration.sh
