@@ -6,7 +6,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	"github.com/Prrromanssss/chat-server/internal/models"
+	models "github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	pb "github.com/Prrromanssss/chat-server/pkg/chat_v1"
 )

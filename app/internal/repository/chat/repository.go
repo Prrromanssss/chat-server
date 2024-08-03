@@ -8,7 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 
-	"github.com/Prrromanssss/chat-server/internal/models"
+	models "github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
 )
 

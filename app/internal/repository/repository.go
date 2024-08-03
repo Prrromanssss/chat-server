@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	"github.com/Prrromanssss/chat-server/internal/models"
+	models "github.com/Prrromanssss/chat-server/internal/model"
 )
 
 // ChatRepository defines methods for managing chat operations.
