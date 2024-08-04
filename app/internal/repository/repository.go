@@ -29,4 +29,7 @@ type ChatRepository interface {
 
 	// SendMessage sends a message with the specified parameters.
 	SendMessage(ctx context.Context, params model.SendMessageParams) (err error)
+
+	// CreateAPILog creates log in database of every api action and returns any error..
+	CreateAPILog(ctx context.Context, params model.CreateAPILogParams) (err error)
 }

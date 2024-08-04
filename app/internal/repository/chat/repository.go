@@ -176,3 +176,28 @@ func (p *chatPGRepo) SendMessage(ctx context.Context, params model.SendMessagePa
 
 	return nil
 }
+
+// CreateAPILog creates log in database of every api action.
+func (p *chatPGRepo) CreateAPILog(
+	ctx context.Context,
+	params model.CreateAPILogParams,
+) (err error) {
+	log.Infof("chatPGRepo.CreateAPILog, params: %+v", params)
+
+	paramsRepo := converter.ConvertCreateAPILogParamsFromServiceToRepo(params)
+
+	q := db.Query{
+		Name:     "chatPGRepo.CreateAPILog",
+		QueryRaw: queryCreateAPILog,
+	}
+
+	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.Method, paramsRepo.RequestData, paramsRepo.ResponseData)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"chatPGRepo.CreateAPILog.DB.ExecContext.queryCreateAPILog",
+		)
+	}
+
+	return nil
+}

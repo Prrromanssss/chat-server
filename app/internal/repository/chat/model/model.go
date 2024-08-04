@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // CreateUsersForChatParams holds the list of email addresses for creating users in a chat.
 type CreateUsersForChatParams struct {
@@ -38,4 +41,11 @@ type LinkParticipantsToChatParams struct {
 // UnlinkParticipantsFromChatParams holds the data for unlinking users from a chat.
 type UnlinkParticipantsFromChatParams struct {
 	ChatID int64 `db:"chat_id"`
+}
+
+// CreateAPILogParams holds the parameters for logging API actions related to user creation.
+type CreateAPILogParams struct {
+	Method       string         `db:"action_type"`
+	RequestData  string         `db:"request_data"`
+	ResponseData sql.NullString `db:"response_data"`
 }
