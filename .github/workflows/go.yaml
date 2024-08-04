@@ -125,7 +125,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSHKEY }}
           source: "build/docker-compose.yaml"
-          target: "~"
+          target: "~/chat_server"
 
       - name: Copy Env File via SCP
         uses: appleboy/scp-action@master
@@ -134,7 +134,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSHKEY }}
           source: ".env"
-          target: "~"
+          target: "~/chat_server"
           
   deploy:
     runs-on: ubuntu-latest
@@ -164,11 +164,14 @@ jobs:
           envs: REGISTRY, CHAT_SERVER_TAG_NAME, CHAT_SERVER_MIGRATOR_TAG_NAME
           script: |
             # Set up variables
-            echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> .env
-            echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> .env
+            echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> ~/chat_server/.env
+            echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> ~/chat_server/.env
             
             # Login into Selectel Registry
             echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin $REGISTRY
+
+            # Navigate to the chat_server directory
+            cd ~/chat_server
             
             # Stop old container
             docker compose down
