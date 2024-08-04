@@ -6,6 +6,7 @@ import (
 	"github.com/Prrromanssss/chat-server/internal/model"
 )
 
+// ChatService defines methods for managing chat operations.
 type ChatService interface {
 	// CreateChat creates a new chat with the given user emails and returns the chat ID.
 	CreateChat(ctx context.Context, params model.CreateChatParams) (resp model.CreateChatResponse, err error)
