@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  REGISTRY: "cr.selcloud.ru/slimshady"
+  IMAGE_APP_NAME: "chat-server"
+  IMAGE_MIGRATOR_NAME: "chat-server-migrator"
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -65,3 +70,105 @@ jobs:
 
           # Optional: The mode to install golangci-lint. It can be 'binary' or 'goinstall'.
           # install-mode: "goinstall"
+
+  push-to-registry:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Registry
+        run: |
+          echo ${{ secrets.REGISTRY_PASSWORD }} | docker login -u ${{ secrets.REGISTRY_USERNAME }} --password-stdin $REGISTRY
+
+      - name: Build and Push App
+        run: |
+          CHAT_SERVER_TAG_NAME=$(echo $GITHUB_SHA | head -c7)
+          docker buildx create --use
+          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_APP_NAME:$CHAT_SERVER_TAG_NAME -f Dockerfile .
+          echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> $GITHUB_ENV
+      
+      - name: Build and Push Migrator
+        run: |
+          CHAT_SERVER_MIGRATOR_TAG_NAME=$(echo $GITHUB_SHA | head -c7)
+          docker buildx create --use
+          docker buildx build --no-cache --push --tag $REGISTRY/$IMAGE_MIGRATOR_NAME:$CHAT_SERVER_MIGRATOR_TAG_NAME -f migration.Dockerfile .
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> $GITHUB_ENV
+
+      - name: Save tag names as artifact
+        run: |
+          echo "CHAT_SERVER_TAG_NAME=${{ env.CHAT_SERVER_TAG_NAME }}" >> tag_names.env
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=${{ env.CHAT_SERVER_MIGRATOR_TAG_NAME }}" >> tag_names.env
+      
+      - name: Upload tag names artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tag-names
+          path: tag_names.env
+        
+      - name: Update .env file with tags
+        run: |
+          echo "CHAT_SERVER_TAG_NAME=${{ env.CHAT_SERVER_TAG_NAME }}" >> .env
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=${{ env.CHAT_SERVER_MIGRATOR_TAG_NAME }}" >> .env
+      
+      - name: Copy Docker Compose File via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          source: "docker-compose.yaml"
+          target: "~"
+
+      - name: Copy Env File via SCP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          source: ".env"
+          target: "~"
+          
+  deploy:
+    runs-on: ubuntu-latest
+    needs: push-to-registry
+
+    steps:
+      - name: Download tag names artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: tag-names
+          path: .
+
+      - name: Source tag names and export to environment
+        run: |
+          source tag_names.env
+          echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> $GITHUB_ENV
+          echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> $GITHUB_ENV
+          export CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME
+          export CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME
+
+      - name: Deploy to Selectel Cloud via SSH action
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          envs: REGISTRY, CHAT_SERVER_TAG_NAME, CHAT_SERVER_MIGRATOR_TAG_NAME
+          script: |
+            # Set up variables
+            echo "CHAT_SERVER_TAG_NAME=$CHAT_SERVER_TAG_NAME" >> .env
+            echo "CHAT_SERVER_MIGRATOR_TAG_NAME=$CHAT_SERVER_MIGRATOR_TAG_NAME" >> .env
+            
+            # Login into Selectel Registry
+            docker login -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }} $REGISTRY
+            
+            # Stop old container
+            docker compose down
+            
+            # Run a new containers from a new images
+            docker compose up --build -d

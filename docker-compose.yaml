@@ -1,0 +1,31 @@
+version: '3.9'
+
+volumes:
+  postgres_volume_local:
+  postgres_volume_prod:
+
+services:
+  chat-server:
+    image: cr.selcloud.ru/slimshady/chat-server:${CHAT_SERVER_TAG_NAME}
+    restart: always
+    depends_on:
+      - chat-server-pg
+    ports:
+      - "50053:50053"
+    environment:
+      - CONFIG_PATH=/config.yaml
+
+  chat-server-pg:
+    image: postgres:16.3-alpine3.20
+    env_file:
+      - ".env"
+    ports:
+      - "54321:5432"
+    volumes:
+      - postgres_volume_local:/var/lib/postgresql/data
+
+  chat-server-migrator:
+    image: cr.selcloud.ru/slimshady/chat-server-migrator:${CHAT_SERVER_MIGRATOR_TAG_NAME}
+    restart: on-failure
+    environment:
+      DB_HOST: chat-server-pg

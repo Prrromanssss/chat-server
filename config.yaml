@@ -1,0 +1,10 @@
+grpc:
+  host: "0.0.0.0"
+  port: "50053"
+postgres:
+  host: "chat-server-pg"
+  port: "5432"
+  user: "chat-server-user"
+  password: "chat-server-password"
+  dbname: "chat-server"
+  sslmode: "disable"
