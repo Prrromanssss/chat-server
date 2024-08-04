@@ -6,21 +6,23 @@ import (
 
 	"google.golang.org/protobuf/types/known/emptypb"
 
-	models "github.com/Prrromanssss/chat-server/internal/model"
-	"github.com/Prrromanssss/chat-server/internal/repository"
+	"github.com/Prrromanssss/chat-server/internal/converter"
+	"github.com/Prrromanssss/chat-server/internal/service"
 	pb "github.com/Prrromanssss/chat-server/pkg/chat_v1"
 )
 
 // GRPCHandlers implements the gRPC server for chat operations.
 // It uses a ChatRepository to interact with chat data.
 type GRPCHandlers struct {
-	pb.UnimplementedChatV1Server                           // Embeds the unimplemented server for backward compatibility.
-	repo                         repository.ChatRepository // Repository instance for chat data operations.
+	pb.UnimplementedChatV1Server
+	chatService service.ChatService
 }
 
 // NewGRPCHandlers creates a new instance of GRPCHandlers with the provided ChatRepository.
-func NewGRPCHandlers(repo repository.ChatRepository) pb.ChatV1Server {
-	return &GRPCHandlers{repo: repo}
+func NewGRPCHandlers(chatService service.ChatService) *GRPCHandlers {
+	return &GRPCHandlers{
+		chatService: chatService,
+	}
 }
 
 // Create handles the RPC call to create a new chat.
@@ -28,14 +30,12 @@ func NewGRPCHandlers(repo repository.ChatRepository) pb.ChatV1Server {
 func (h *GRPCHandlers) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
 	log.Printf("rpc Create, request: %+v", req)
 
-	chatID, err := h.repo.CreateChat(ctx, req.Emails)
+	resp, err := h.chatService.CreateChat(ctx, converter.ConvertCreateRequestFromHandlerToService(req))
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.CreateResponse{
-		Id: chatID,
-	}, nil
+	return converter.ConvertCreateChatResponseFromServiceToHandler(resp), nil
 }
 
 // Delete handles the RPC call to delete an existing chat.
@@ -43,7 +43,7 @@ func (h *GRPCHandlers) Create(ctx context.Context, req *pb.CreateRequest) (*pb.C
 func (h *GRPCHandlers) Delete(ctx context.Context, req *pb.DeleteRequest) (*emptypb.Empty, error) {
 	log.Printf("rpc Delete, request: %+v", req)
 
-	err := h.repo.DeleteChat(ctx, req.Id)
+	err := h.chatService.DeleteChat(ctx, converter.ConvertDeleteRequestFromHandlerToService(req))
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +56,7 @@ func (h *GRPCHandlers) Delete(ctx context.Context, req *pb.DeleteRequest) (*empt
 func (h *GRPCHandlers) SendMessage(ctx context.Context, req *pb.SendMessageRequest) (*emptypb.Empty, error) {
 	log.Printf("rpc SendMessage, request: %+v", req)
 
-	err := h.repo.SendMessage(ctx, models.SendMessageParams{
-		From:   req.From,
-		Text:   req.Text,
-		SentAt: req.Timestamp.AsTime(),
-	})
+	err := h.chatService.SendMessage(ctx, converter.ConvertSendMessageRequestFromHandlerToService(req))
 	if err != nil {
 		return nil, err
 	}
