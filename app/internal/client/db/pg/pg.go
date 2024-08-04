@@ -84,6 +84,15 @@ func (p *pg) QueryRowContext(ctx context.Context, q db.Query, args ...interface{
 	return p.dbc.QueryRow(ctx, q.QueryRaw, args...)
 }
 
+func (p *pg) SendBatchContext(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	tx, ok := ctx.Value(TxKey).(pgx.Tx)
+	if ok {
+		return tx.SendBatch(ctx, b)
+	}
+
+	return p.dbc.SendBatch(ctx, b)
+}
+
 func (p *pg) BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error) {
 	return p.dbc.BeginTx(ctx, txOptions)
 }

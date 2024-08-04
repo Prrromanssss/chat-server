@@ -1,6 +1,29 @@
-package models
+package model
 
 import "time"
+
+// CreateChatResponse represents the response after creating a chat, including the ChatID.
+type CreateChatResponse struct {
+	ChatID int64
+}
+
+type CreateUsersForChatParams struct {
+	Emails []string
+}
+
+type CreateUsersForChatResponse struct {
+	UserIDs []int64
+}
+
+type LinkParticipantsToChatParams struct {
+	ChatID  int64
+	UserIDs []int64
+}
+
+// DeleteChatParams holds the ID of the chat to be deleted.
+type DeleteChatParams struct {
+	ChatID int64
+}
 
 // SendMessageParams holds the data for sending a message.
 type SendMessageParams struct {
@@ -9,8 +32,6 @@ type SendMessageParams struct {
 	SentAt time.Time // Timestamp of the message
 }
 
-// LinkParticipantsToChat links a user to a chat.
-type LinkParticipantsToChat struct {
-	ChatID int64 `db:"chat_id"` // Chat identifier
-	UserID int64 `db:"user_id"` // User identifier
+type UnlinkParticipantsFromChatParams struct {
+	ChatID int64
 }
