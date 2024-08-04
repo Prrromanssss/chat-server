@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/pkg/errors"
@@ -45,11 +46,15 @@ func (s *chatService) CreateChat(
 			return txErr
 		}
 
+		fmt.Printf("ChatID: %d\n", resp.ChatID)
+
 		// Create users for the chat and get their IDs
 		usersResp, txErr := s.chatRepository.CreateUsersForChat(ctx, model.CreateUsersForChatParams(params))
 		if txErr != nil {
 			return txErr
 		}
+
+		fmt.Printf("Users: %v", usersResp.UserIDs)
 
 		// Link the created users to the new chat
 		txErr = s.chatRepository.LinkParticipantsToChat(ctx, model.LinkParticipantsToChatParams{

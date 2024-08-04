@@ -7,6 +7,14 @@ import (
 	modelRepo "github.com/Prrromanssss/chat-server/internal/repository/chat/model"
 )
 
+// ConvertCreateChatResponseFromRepoToService converts a CreateChatResponse from the repository layer
+// to a CreateChatResponse used in the service layer.
+func ConvertCreateChatResponseFromRepoToService(params modelRepo.CreateChatResponse) model.CreateChatResponse {
+	return model.CreateChatResponse{
+		ChatID: params.ChatID,
+	}
+}
+
 // ConvertCreateUsersForChatParamsFromServiceToRepo converts CreateUsersForChatParams
 // from the service layer format to the repository layer format.
 func ConvertCreateUsersForChatParamsFromServiceToRepo(params model.CreateUsersForChatParams) modelRepo.CreateUsersForChatParams {

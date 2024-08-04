@@ -42,7 +42,7 @@ func (p *chatPGRepo) CreateChat(ctx context.Context) (resp model.CreateChatRespo
 		return
 	}
 
-	return resp, nil
+	return converter.ConvertCreateChatResponseFromRepoToService(respRepo), nil
 }
 
 // CreateUsersForChat creates users for the chat based on the provided email list and returns their IDs.
@@ -56,7 +56,7 @@ func (p *chatPGRepo) CreateUsersForChat(
 
 	userIDs := make([]int64, len(paramsRepo.Emails))
 
-	for _, email := range paramsRepo.Emails {
+	for i, email := range paramsRepo.Emails {
 		var userID int64
 
 		q := db.Query{
@@ -70,7 +70,7 @@ func (p *chatPGRepo) CreateUsersForChat(
 			return
 		}
 
-		userIDs = append(userIDs, userID)
+		userIDs[i] = userID
 	}
 
 	return converter.ConvertCreateUsersForChatResponseFromRepoToService(

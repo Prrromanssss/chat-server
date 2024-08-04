@@ -7,13 +7,20 @@ const (
 	`
 
 	queryCreateUser = `
-		INSERT INTO chats.users
-			(email)
-		VALUES
-			($1)
-		ON CONFLICT (email) DO NOTHING
-		RETURNING
-			id;
+		WITH ins AS (
+			INSERT INTO chats.users 
+				(email)
+			VALUES 
+				($1)
+			ON CONFLICT (email) DO NOTHING
+			RETURNING id
+		)
+		SELECT id
+		FROM ins
+		UNION ALL
+		SELECT id
+		FROM chats.users
+		WHERE email = $1;
 	`
 
 	queryLinkParticipantsToChat = `
@@ -41,7 +48,7 @@ const (
 	`
 
 	queryCreateAPILog = `
-		INSERT INTO users.api_user_log
+		INSERT INTO chats.api_chat_log
 			(action_type, request_data, response_data)
 		VALUES
 			($1, $2, $3);
