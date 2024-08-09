@@ -89,7 +89,7 @@ func (s *chatService) CreateChat(
 		return nil
 	})
 	if err != nil {
-		err = errors.Wrapf(err, "chatService.CreateChat.txManager.ReadCommitted: Transaction failed")
+		err = errors.Wrapf(err, "Transaction failed")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (s *chatService) DeleteChat(ctx context.Context, params model.DeleteChatPar
 		return nil
 	})
 	if err != nil {
-		err = errors.Wrapf(err, "chatService.DeleteChat.txManager.ReadCommitted: Transaction failed")
+		err = errors.Wrapf(err, "Transaction failed")
 		return
 	}
 
@@ -170,7 +170,7 @@ func (s *chatService) SendMessage(ctx context.Context, params model.SendMessageP
 		return nil
 	})
 	if err != nil {
-		err = errors.Wrapf(err, "chatService.SendMessage.txManager.ReadCommitted: Transaction failed")
+		err = errors.Wrapf(err, "Transaction failed")
 		return
 	}
 
