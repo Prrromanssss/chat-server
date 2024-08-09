@@ -38,7 +38,7 @@ func (p *chatPGRepo) CreateChat(ctx context.Context) (resp model.CreateChatRespo
 
 	err = p.db.DB().ScanOneContext(ctx, &respRepo, q)
 	if err != nil {
-		err = errors.Wrap(err, "chatPGRepo.CreateChat.ScanOneContext.queryCreateChat")
+		err = errors.Wrap(err, "Cannot create chat")
 		return
 	}
 
@@ -66,7 +66,7 @@ func (p *chatPGRepo) CreateUsersForChat(
 
 		err = p.db.DB().ScanOneContext(ctx, &userID, q, email)
 		if err != nil {
-			err = errors.Wrapf(err, "chatPGRepo.CreateUsersForChat.ScanOneContext(userID: %v)", userID)
+			err = errors.Wrapf(err, "Cannot create user for chat(userID: %v)", userID)
 			return
 		}
 
@@ -101,7 +101,7 @@ func (p *chatPGRepo) LinkParticipantsToChat(
 	if err != nil {
 		err = errors.Wrapf(
 			err,
-			"chatPGRepo.LinkParticipantsToChat.SendBatchContext: cannot close batch for chat(chatID: %d)",
+			"Cannot close batch for chat(chatID: %d)",
 			paramsRepo.ChatID,
 		)
 		return
@@ -128,7 +128,7 @@ func (p *chatPGRepo) UnlinkParticipantsFromChat(
 	if err != nil {
 		err = errors.Wrapf(
 			err,
-			"chatPGRepo.UnlinkParticipantsFromChat.ExecContext.queryUnlinkParticipantsFromChat(chatID: %d)",
+			"Cannot unlink participants from chat(chatID: %d)",
 			paramsRepo.ChatID,
 		)
 		return
@@ -150,7 +150,7 @@ func (p *chatPGRepo) DeleteChat(ctx context.Context, params model.DeleteChatPara
 
 	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.ChatID)
 	if err != nil {
-		err = errors.Wrapf(err, "chatPGRepo.DeleteChat.ExecContext.queryDeleteChat(chatID: %d)", paramsRepo.ChatID)
+		err = errors.Wrapf(err, "Cannot delete chat(chatID: %d)", paramsRepo.ChatID)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (p *chatPGRepo) SendMessage(ctx context.Context, params model.SendMessagePa
 
 	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.From, paramsRepo.Text, paramsRepo.SentAt)
 	if err != nil {
-		err = errors.Wrapf(err, "chatPGRepo.SendMessage.ExecContext.querySendMessage(From: %s)", paramsRepo.From)
+		err = errors.Wrapf(err, "Cannot send message (from: %s)", paramsRepo.From)
 		return
 	}
 
@@ -195,7 +195,7 @@ func (p *chatPGRepo) CreateAPILog(
 	if err != nil {
 		return errors.Wrapf(
 			err,
-			"chatPGRepo.CreateAPILog.DB.ExecContext.queryCreateAPILog",
+			"Cannot create api log for chat",
 		)
 	}
 
