@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Prrromanssss/platform_common/pkg/db"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/pkg/errors"
 
-	"github.com/Prrromanssss/chat-server/internal/client/db"
 	"github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	"github.com/Prrromanssss/chat-server/internal/service"

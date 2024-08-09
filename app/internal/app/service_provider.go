@@ -4,16 +4,18 @@ import (
 	"context"
 	"log"
 
+	"github.com/Prrromanssss/platform_common/pkg/closer"
+	"github.com/Prrromanssss/platform_common/pkg/db"
+	"github.com/Prrromanssss/platform_common/pkg/db/pg"
+	"github.com/Prrromanssss/platform_common/pkg/db/transaction"
+
 	"github.com/Prrromanssss/chat-server/config"
 	chatAPI "github.com/Prrromanssss/chat-server/internal/api/grpc/chat"
-	"github.com/Prrromanssss/chat-server/internal/client/db"
-	"github.com/Prrromanssss/chat-server/internal/client/db/pg"
-	"github.com/Prrromanssss/chat-server/internal/client/db/transaction"
+
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	chatRepository "github.com/Prrromanssss/chat-server/internal/repository/chat"
 	"github.com/Prrromanssss/chat-server/internal/service"
 	chatService "github.com/Prrromanssss/chat-server/internal/service/chat"
-	"github.com/Prrromanssss/chat-server/pkg/closer"
 )
 
 type serviceProvider struct {
