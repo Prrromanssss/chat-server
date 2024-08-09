@@ -6,21 +6,38 @@ const (
 		RETURNING id;
 	`
 
+	queryCreateUser = `
+		WITH ins AS (
+			INSERT INTO chats.users 
+				(email)
+			VALUES 
+				($1)
+			ON CONFLICT (email) DO NOTHING
+			RETURNING id
+		)
+		SELECT id
+		FROM ins
+		UNION ALL
+		SELECT id
+		FROM chats.users
+		WHERE email = $1;
+	`
+
 	queryLinkParticipantsToChat = `
 		INSERT INTO chats.chat_participants
 			(chat_id, user_id)
 		VALUES
-			(:chat_id, :user_id);
+			($1, $2);
+	`
+
+	queryDeleteChat = `
+	DELETE FROM chats.chat
+	WHERE id = $1;
 	`
 
 	queryUnlinkParticipantsFromChat = `
 		DELETE FROM chats.chat_participants
-		WHERE chat_id = $1
-	`
-
-	queryDeleteChat = `
-		DELETE FROM chats.chat
-		WHERE id = $1
+		WHERE chat_id = $1;
 	`
 
 	querySendMessage = `
@@ -30,12 +47,10 @@ const (
 			($1, $2, $3);
 	`
 
-	queryCreateUser = `
-		INSERT INTO chats.users
-			(email)
+	queryCreateAPILog = `
+		INSERT INTO chats.api_chat_log
+			(action_type, request_data, response_data)
 		VALUES
-			($1)
-		RETURNING
-			id;
+			($1, $2, $3);
 	`
 )

@@ -2,117 +2,201 @@ package chat
 
 import (
 	"context"
-	"database/sql"
-	"log"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/jackc/pgx/v4"
 	"github.com/pkg/errors"
 
-	"github.com/Prrromanssss/chat-server/internal/models"
+	"github.com/Prrromanssss/chat-server/internal/client/db"
+	"github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
+	"github.com/Prrromanssss/chat-server/internal/repository/chat/converter"
+	modelRepo "github.com/Prrromanssss/chat-server/internal/repository/chat/model"
 )
 
 type chatPGRepo struct {
-	db *sqlx.DB
+	db db.Client
 }
 
-// NewPGRepo creates a new instance of chatPGRepo with the provided SQL database connection.
-func NewPGRepo(db *sqlx.DB) repository.ChatRepository {
-	return &chatPGRepo{db: db}
+// NewRepository creates a new instance of chatPGRepo with the provided SQL database connection.
+func NewRepository(db db.Client) repository.ChatRepository {
+	return &chatPGRepo{
+		db: db,
+	}
 }
 
 // CreateChat creates a new chat and links participants to it.
-func (p *chatPGRepo) CreateChat(ctx context.Context, emails []string) (chatID int64, err error) {
-	tx, err := p.db.BeginTxx(ctx, nil)
+func (p *chatPGRepo) CreateChat(ctx context.Context) (resp model.CreateChatResponse, err error) {
+	log.Infof("chatPGRepo.CreateChat, params")
+
+	var respRepo modelRepo.CreateChatResponse
+
+	q := db.Query{
+		Name:     "chatPGRepo.CreateChat",
+		QueryRaw: queryCreateChat,
+	}
+
+	err = p.db.DB().ScanOneContext(ctx, &respRepo, q)
 	if err != nil {
-		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.BeginTxx")
+		err = errors.Wrap(err, "Cannot create chat")
+		return
 	}
 
-	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
-			log.Println(rollbackErr)
-		}
-	}()
-
-	err = tx.GetContext(ctx, &chatID, queryCreateChat)
-	if err != nil {
-		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.GetContext.queryCreateChat")
-	}
-
-	userIDs := make([]int64, len(emails))
-
-	stmt, err := tx.PrepareContext(ctx, queryCreateUser)
-	if err != nil {
-		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.PrepareContext.queryCreateUser")
-	}
-
-	defer func() {
-		if stmtErr := stmt.Close(); stmtErr != nil {
-			log.Println(stmtErr)
-		}
-	}()
-
-	for _, email := range emails {
-		var userID int64
-		err = stmt.QueryRowContext(ctx, email).Scan(&userID)
-		if err != nil {
-			return 0, errors.Wrap(err, "chatPGRepo.CreateUsers.QueryRowContext.Scan")
-		}
-		userIDs = append(userIDs, userID)
-	}
-
-	params := make([]models.LinkParticipantsToChat, len(userIDs))
-	for i, userID := range userIDs {
-		params[i] = models.LinkParticipantsToChat{UserID: userID, ChatID: chatID}
-	}
-
-	_, err = tx.NamedExecContext(ctx, queryLinkParticipantsToChat, params)
-	if err != nil {
-		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.queryLinkParticipantsToChat")
-	}
-
-	if err = tx.Commit(); err != nil {
-		return 0, errors.Wrap(err, "chatPGRepo.CreateChat.Commit")
-	}
-
-	return chatID, nil
+	return converter.ConvertCreateChatResponseFromRepoToService(respRepo), nil
 }
 
-// DeleteChat removes a chat and unlinks its participants.
-func (p *chatPGRepo) DeleteChat(ctx context.Context, chatID int64) (err error) {
-	tx, err := p.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "chatPGRepo.DeleteChat.BeginTxx")
-	}
+// CreateUsersForChat creates users for the chat based on the provided email list and returns their IDs.
+func (p *chatPGRepo) CreateUsersForChat(
+	ctx context.Context,
+	params model.CreateUsersForChatParams,
+) (resp model.CreateUsersForChatResponse, err error) {
+	log.Infof("chatPGRepo.CreateUsersForChat, params: %+v", params)
 
-	defer func() {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
-			log.Println(rollbackErr)
+	paramsRepo := converter.ConvertCreateUsersForChatParamsFromServiceToRepo(params)
+
+	userIDs := make([]int64, len(paramsRepo.Emails))
+
+	for i, email := range paramsRepo.Emails {
+		var userID int64
+
+		q := db.Query{
+			Name:     "chatPGRepo.CreateUsersForChat",
+			QueryRaw: queryCreateUser,
 		}
-	}()
 
-	_, err = tx.ExecContext(ctx, queryUnlinkParticipantsFromChat, chatID)
-	if err != nil {
-		return errors.Wrapf(err, "chatPGRepo.DeleteChat.ExecContext.queryUnlinkParticipantsFromChat(chatID: %d)", chatID)
+		err = p.db.DB().ScanOneContext(ctx, &userID, q, email)
+		if err != nil {
+			err = errors.Wrapf(err, "Cannot create user for chat(userID: %v)", userID)
+			return
+		}
+
+		userIDs[i] = userID
 	}
 
-	_, err = tx.ExecContext(ctx, queryDeleteChat, chatID)
-	if err != nil {
-		return errors.Wrapf(err, "chatPGRepo.DeleteChat.ExecContext.queryDeleteChat(chatID: %d)", chatID)
+	return converter.ConvertCreateUsersForChatResponseFromRepoToService(
+		modelRepo.CreateUsersForChatResponse{
+			UserIDs: userIDs,
+		},
+	), nil
+}
+
+// LinkParticipantsToChat links participants to a chat by adding their IDs to the chat participants list.
+func (p *chatPGRepo) LinkParticipantsToChat(
+	ctx context.Context,
+	params model.LinkParticipantsToChatParams,
+) (err error) {
+	log.Infof("chatPGRepo.LinkParticipantsToChat, params: %+v", params)
+
+	paramsRepo := converter.ConvertLinkParticipantsToChatParamsFromServiceToRepo(params)
+
+	batch := &pgx.Batch{}
+
+	for _, userID := range paramsRepo.UserIDs {
+		batch.Queue(queryLinkParticipantsToChat, paramsRepo.ChatID, userID)
 	}
 
-	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "chatPGRepo.DeleteChat.Commit")
+	br := p.db.DB().SendBatchContext(ctx, batch)
+
+	err = br.Close()
+	if err != nil {
+		err = errors.Wrapf(
+			err,
+			"Cannot close batch for chat(chatID: %d)",
+			paramsRepo.ChatID,
+		)
+		return
+	}
+
+	return nil
+}
+
+// UnlinkParticipantsFromChat removes participants from a chat based on the provided parameters.
+func (p *chatPGRepo) UnlinkParticipantsFromChat(
+	ctx context.Context,
+	params model.UnlinkParticipantsFromChatParams,
+) (err error) {
+	log.Infof("chatPGRepo.UnlinkParticipantsFromChat, params: %+v", params)
+
+	paramsRepo := converter.ConvertUnlinkParticipantsFromChatParamsFromServiceToRepo(params)
+
+	q := db.Query{
+		Name:     "chatPGRepo.UnlinkParticipantsFromChat",
+		QueryRaw: queryUnlinkParticipantsFromChat,
+	}
+
+	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.ChatID)
+	if err != nil {
+		err = errors.Wrapf(
+			err,
+			"Cannot unlink participants from chat(chatID: %d)",
+			paramsRepo.ChatID,
+		)
+		return
+	}
+
+	return nil
+}
+
+// DeleteChat removes a chat and unlinks its participants based on the provided chat ID.
+func (p *chatPGRepo) DeleteChat(ctx context.Context, params model.DeleteChatParams) (err error) {
+	log.Infof("chatPGRepo.DeleteChat, params: %+v", params)
+
+	paramsRepo := converter.ConvertDeleteChatParamsFromServiceToRepo(params)
+
+	q := db.Query{
+		Name:     "chatPGRepo.DeleteChat",
+		QueryRaw: queryDeleteChat,
+	}
+
+	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.ChatID)
+	if err != nil {
+		err = errors.Wrapf(err, "Cannot delete chat(chatID: %d)", paramsRepo.ChatID)
+		return
 	}
 
 	return nil
 }
 
 // SendMessage sends a message to a chat.
-func (p *chatPGRepo) SendMessage(ctx context.Context, params models.SendMessageParams) (err error) {
-	_, err = p.db.ExecContext(ctx, querySendMessage, params.From, params.Text, params.SentAt)
+func (p *chatPGRepo) SendMessage(ctx context.Context, params model.SendMessageParams) (err error) {
+	log.Infof("chatPGRepo.SendMessage, params: %+v", params)
+
+	paramsRepo := converter.ConvertSendMessageParamsFromServiceToRepo(params)
+
+	q := db.Query{
+		Name:     "chatPGRepo.SendMessage",
+		QueryRaw: querySendMessage,
+	}
+
+	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.From, paramsRepo.Text, paramsRepo.SentAt)
 	if err != nil {
-		return errors.Wrapf(err, "chatPGRepo.SendMessage.ExecContext.querySendMessage(From: %s)", params.From)
+		err = errors.Wrapf(err, "Cannot send message (from: %s)", paramsRepo.From)
+		return
+	}
+
+	return nil
+}
+
+// CreateAPILog creates log in database of every api action.
+func (p *chatPGRepo) CreateAPILog(
+	ctx context.Context,
+	params model.CreateAPILogParams,
+) (err error) {
+	log.Infof("chatPGRepo.CreateAPILog, params: %+v", params)
+
+	paramsRepo := converter.ConvertCreateAPILogParamsFromServiceToRepo(params)
+
+	q := db.Query{
+		Name:     "chatPGRepo.CreateAPILog",
+		QueryRaw: queryCreateAPILog,
+	}
+
+	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.Method, paramsRepo.RequestData, paramsRepo.ResponseData)
+	if err != nil {
+		return errors.Wrapf(
+			err,
+			"Cannot create api log for chat",
+		)
 	}
 
 	return nil
