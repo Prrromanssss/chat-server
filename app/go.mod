@@ -3,10 +3,10 @@ module github.com/Prrromanssss/chat-server
 go 1.22.4
 
 require (
-	github.com/Prrromanssss/platform_common v0.0.1
+	github.com/Prrromanssss/platform_common v0.0.2
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
+	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/gofiber/fiber/v2 v2.52.5
-	github.com/gojuno/minimock v1.9.2
 	github.com/gojuno/minimock/v3 v3.3.14
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jackc/pgx/v4 v4.18.3

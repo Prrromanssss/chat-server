@@ -89,8 +89,7 @@ func (s *chatService) CreateChat(
 		return nil
 	})
 	if err != nil {
-		err = errors.Wrapf(err, "Transaction failed")
-		return
+		return model.CreateChatResponse{}, errors.Wrapf(err, "Transaction failed")
 	}
 
 	return resp, nil
