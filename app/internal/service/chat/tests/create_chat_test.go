@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/Prrromanssss/platform_common/pkg/db"
@@ -23,6 +22,7 @@ func TestCreateChat(t *testing.T) {
 
 	type (
 		chatRepositoryMockFunc func(mc *minimock.Controller) repository.ChatRepository
+		logRepositoryMockFunc  func(mc *minimock.Controller) repository.LogRepository
 		txManagerMockFunc      func(f func(context.Context) error, mc *minimock.Controller) db.TxManager
 	)
 
@@ -42,8 +42,8 @@ func TestCreateChat(t *testing.T) {
 		email2  = gofakeit.Email()
 		userIDs = []int64{id1, id2}
 
-		ErrRepository    = errors.New("repository error")
-		ErrRepositoryLog = errors.New("repository error in CreateAPILog")
+		ErrUserRepository = errors.New("user repository error")
+		ErrLogRepository  = errors.New("log repository error")
 
 		req = model.CreateChatParams{
 			Emails: []string{email1, email2},
@@ -56,25 +56,13 @@ func TestCreateChat(t *testing.T) {
 		usersResp = model.CreateUsersForChatResponse{
 			UserIDs: userIDs,
 		}
+
+		logApiReq = model.CreateAPILogParams{
+			Method:       "Create",
+			RequestData:  req,
+			ResponseData: resp,
+		}
 	)
-
-	requestData, err := json.Marshal(req)
-	if err != nil {
-		t.Error(err)
-	}
-
-	responseData, err := json.Marshal(resp)
-	if err != nil {
-		t.Error(err)
-	}
-
-	responseDataString := string(responseData)
-
-	logApiReq := model.CreateAPILogParams{
-		Method:       "Create",
-		RequestData:  string(requestData),
-		ResponseData: &responseDataString,
-	}
 
 	tests := []struct {
 		name               string
@@ -82,6 +70,7 @@ func TestCreateChat(t *testing.T) {
 		want               model.CreateChatResponse
 		err                error
 		chatRepositoryMock chatRepositoryMockFunc
+		logRepositoryMock  logRepositoryMockFunc
 		txManagerMock      txManagerMockFunc
 	}{
 		{
@@ -101,6 +90,11 @@ func TestCreateChat(t *testing.T) {
 					ChatID:  chatID,
 					UserIDs: userIDs,
 				}).Return(nil)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(nil)
 
 				return mock
@@ -115,16 +109,21 @@ func TestCreateChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error case in CreateChat",
+			name: "user repository error in CreateChat",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
 			want: model.CreateChatResponse{},
-			err:  ErrRepository,
+			err:  ErrUserRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
-				mock.CreateChatMock.Expect(ctx).Return(model.CreateChatResponse{}, ErrRepository)
+				mock.CreateChatMock.Expect(ctx).Return(model.CreateChatResponse{}, ErrUserRepository)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 
 				return mock
 			},
@@ -138,18 +137,23 @@ func TestCreateChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error case in CreateUsersForChat",
+			name: "user repository error in CreateUsersForChat",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
 			want: model.CreateChatResponse{},
-			err:  ErrRepository,
+			err:  ErrUserRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.CreateChatMock.Expect(ctx).Return(resp, nil)
 				mock.CreateUsersForChatMock.Expect(ctx, model.CreateUsersForChatParams(req)).
-					Return(model.CreateUsersForChatResponse{}, ErrRepository)
+					Return(model.CreateUsersForChatResponse{}, ErrUserRepository)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 
 				return mock
 			},
@@ -163,13 +167,13 @@ func TestCreateChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error case in LinkParticipantsToChat",
+			name: "user repository error in LinkParticipantsToChat",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
 			want: model.CreateChatResponse{},
-			err:  ErrRepository,
+			err:  ErrUserRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.CreateChatMock.Expect(ctx).Return(resp, nil)
@@ -178,7 +182,12 @@ func TestCreateChat(t *testing.T) {
 				mock.LinkParticipantsToChatMock.Expect(ctx, model.LinkParticipantsToChatParams{
 					ChatID:  chatID,
 					UserIDs: userIDs,
-				}).Return(ErrRepository)
+				}).Return(ErrUserRepository)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 
 				return mock
 			},
@@ -192,13 +201,13 @@ func TestCreateChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error in CreateAPILog",
+			name: "log repository error",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
 			want: model.CreateChatResponse{},
-			err:  ErrRepositoryLog,
+			err:  ErrLogRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.CreateChatMock.Expect(ctx).Return(resp, nil)
@@ -208,7 +217,12 @@ func TestCreateChat(t *testing.T) {
 					ChatID:  chatID,
 					UserIDs: userIDs,
 				}).Return(nil)
-				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(ErrRepositoryLog)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
+				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(ErrLogRepository)
 
 				return mock
 			},
@@ -228,6 +242,7 @@ func TestCreateChat(t *testing.T) {
 			t.Parallel()
 
 			chatRepositoryMock := tt.chatRepositoryMock(mc)
+			logRepositoryMock := tt.logRepositoryMock(mc)
 			txManagerMock := tt.txManagerMock(func(ctx context.Context) error {
 				resp, txErr := chatRepositoryMock.CreateChat(ctx)
 				if txErr != nil {
@@ -247,31 +262,19 @@ func TestCreateChat(t *testing.T) {
 					return txErr
 				}
 
-				requestData, txErr := json.Marshal(req)
-				if txErr != nil {
-					return txErr
-				}
-
-				responseData, err := json.Marshal(resp)
-				if err != nil {
-					t.Error(err)
-				}
-
-				responseDataString := string(responseData)
-
-				txErr = chatRepositoryMock.CreateAPILog(ctx, model.CreateAPILogParams{
+				txErr = logRepositoryMock.CreateAPILog(ctx, model.CreateAPILogParams{
 					Method:       "Create",
-					RequestData:  string(requestData),
-					ResponseData: &responseDataString,
+					RequestData:  req,
+					ResponseData: resp,
 				})
-
 				if txErr != nil {
 					return txErr
 				}
 
 				return nil
 			}, mc)
-			service := chatService.NewService(chatRepositoryMock, txManagerMock)
+
+			service := chatService.NewService(chatRepositoryMock, logRepositoryMock, txManagerMock)
 
 			resp, err := service.CreateChat(tt.args.ctx, tt.args.req)
 			require.ErrorIs(t, err, tt.err)

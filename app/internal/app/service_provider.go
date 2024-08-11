@@ -14,6 +14,7 @@ import (
 
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	chatRepository "github.com/Prrromanssss/chat-server/internal/repository/chat"
+	logRepository "github.com/Prrromanssss/chat-server/internal/repository/log"
 	"github.com/Prrromanssss/chat-server/internal/service"
 	chatService "github.com/Prrromanssss/chat-server/internal/service/chat"
 )
@@ -25,8 +26,10 @@ type serviceProvider struct {
 	txManager db.TxManager
 
 	chatRepository repository.ChatRepository
-	chatService    service.ChatService
-	chatAPI        *chatAPI.GRPCHandlers
+	logRepository  repository.LogRepository
+
+	chatService service.ChatService
+	chatAPI     *chatAPI.GRPCHandlers
 }
 
 func newServiceProvider(cfg *config.Config) *serviceProvider {
@@ -62,10 +65,19 @@ func (s *serviceProvider) ChatRepository(ctx context.Context) repository.ChatRep
 	return s.chatRepository
 }
 
+func (s *serviceProvider) LogRepository(ctx context.Context) repository.LogRepository {
+	if s.logRepository == nil {
+		s.logRepository = logRepository.NewRepository(s.DBClient(ctx))
+	}
+
+	return s.logRepository
+}
+
 func (s *serviceProvider) ChatService(ctx context.Context) service.ChatService {
 	if s.chatService == nil {
 		s.chatService = chatService.NewService(
 			s.ChatRepository(ctx),
+			s.LogRepository(ctx),
 			s.TxManager(ctx),
 		)
 	}

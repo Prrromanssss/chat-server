@@ -2,7 +2,6 @@ package tests
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
 	"github.com/Prrromanssss/platform_common/pkg/db"
@@ -23,6 +22,7 @@ func TestDeleteChat(t *testing.T) {
 
 	type (
 		chatRepositoryMockFunc func(mc *minimock.Controller) repository.ChatRepository
+		logRepositoryMockFunc  func(mc *minimock.Controller) repository.LogRepository
 		txManagerMockFunc      func(f func(context.Context) error, mc *minimock.Controller) db.TxManager
 	)
 
@@ -37,29 +37,25 @@ func TestDeleteChat(t *testing.T) {
 
 		id = gofakeit.Int64()
 
-		ErrRepository    = errors.New("repository error")
-		ErrRepositoryLog = errors.New("repository error in CreateAPILog")
+		ErrUserRepository = errors.New("user repository error")
+		ErrLogRepository  = errors.New("log repository error")
 
 		req = model.DeleteChatParams{
 			ChatID: id,
 		}
+
+		logApiReq = model.CreateAPILogParams{
+			Method:      "Delete",
+			RequestData: req,
+		}
 	)
-
-	requestData, err := json.Marshal(req)
-	if err != nil {
-		t.Error(err)
-	}
-
-	logApiReq := model.CreateAPILogParams{
-		Method:      "Delete",
-		RequestData: string(requestData),
-	}
 
 	tests := []struct {
 		name               string
 		args               args
 		err                error
 		chatRepositoryMock chatRepositoryMockFunc
+		logRepositoryMock  logRepositoryMockFunc
 		txManagerMock      txManagerMockFunc
 	}{
 		{
@@ -74,6 +70,11 @@ func TestDeleteChat(t *testing.T) {
 				mock.UnlinkParticipantsFromChatMock.Expect(ctx, model.UnlinkParticipantsFromChatParams(req)).
 					Return(nil)
 				mock.DeleteChatMock.Expect(ctx, req).Return(nil)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(nil)
 
 				return mock
@@ -88,17 +89,22 @@ func TestDeleteChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error case in DeleteChat",
+			name: "user repository error in DeleteChat",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
-			err: ErrRepository,
+			err: ErrUserRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.UnlinkParticipantsFromChatMock.Expect(ctx, model.UnlinkParticipantsFromChatParams(req)).
 					Return(nil)
-				mock.DeleteChatMock.Expect(ctx, req).Return(ErrRepository)
+				mock.DeleteChatMock.Expect(ctx, req).Return(ErrUserRepository)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 
 				return mock
 			},
@@ -112,16 +118,21 @@ func TestDeleteChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error case in UnlinkParticipantsFromChatParams",
+			name: "user repository error in UnlinkParticipantsFromChatParams",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
-			err: ErrRepository,
+			err: ErrUserRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.UnlinkParticipantsFromChatMock.Expect(ctx, model.UnlinkParticipantsFromChatParams(req)).
-					Return(ErrRepository)
+					Return(ErrUserRepository)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
 
 				return mock
 			},
@@ -135,18 +146,23 @@ func TestDeleteChat(t *testing.T) {
 			},
 		},
 		{
-			name: "repository error in CreateAPILog",
+			name: "log repository error",
 			args: args{
 				ctx: ctx,
 				req: req,
 			},
-			err: ErrRepositoryLog,
+			err: ErrLogRepository,
 			chatRepositoryMock: func(mc *minimock.Controller) repository.ChatRepository {
 				mock := repositoryMocks.NewChatRepositoryMock(mc)
 				mock.UnlinkParticipantsFromChatMock.Expect(ctx, model.UnlinkParticipantsFromChatParams(req)).
 					Return(nil)
 				mock.DeleteChatMock.Expect(ctx, req).Return(nil)
-				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(ErrRepositoryLog)
+
+				return mock
+			},
+			logRepositoryMock: func(mc *minimock.Controller) repository.LogRepository {
+				mock := repositoryMocks.NewLogRepositoryMock(mc)
+				mock.CreateAPILogMock.Expect(ctx, logApiReq).Return(ErrLogRepository)
 
 				return mock
 			},
@@ -166,29 +182,25 @@ func TestDeleteChat(t *testing.T) {
 			t.Parallel()
 
 			chatRepositoryMock := tt.chatRepositoryMock(mc)
+			logRepositoryMock := tt.logRepositoryMock(mc)
 			txManagerMock := tt.txManagerMock(func(ctx context.Context) error {
 				txErr := chatRepositoryMock.DeleteChat(ctx, req)
 				if txErr != nil {
 					return txErr
 				}
 
-				requestData, txErr := json.Marshal(req)
-				if txErr != nil {
-					return txErr
-				}
-
-				txErr = chatRepositoryMock.CreateAPILog(ctx, model.CreateAPILogParams{
+				txErr = logRepositoryMock.CreateAPILog(ctx, model.CreateAPILogParams{
 					Method:      "Delete",
-					RequestData: string(requestData),
+					RequestData: req,
 				})
-
 				if txErr != nil {
 					return txErr
 				}
 
 				return nil
 			}, mc)
-			service := chatService.NewService(chatRepositoryMock, txManagerMock)
+			
+			service := chatService.NewService(chatRepositoryMock, logRepositoryMock, txManagerMock)
 
 			err := service.DeleteChat(tt.args.ctx, tt.args.req)
 			require.ErrorIs(t, err, tt.err)
