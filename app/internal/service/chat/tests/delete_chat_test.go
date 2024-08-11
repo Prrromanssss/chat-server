@@ -199,7 +199,7 @@ func TestDeleteChat(t *testing.T) {
 
 				return nil
 			}, mc)
-			
+
 			service := chatService.NewService(chatRepositoryMock, logRepositoryMock, txManagerMock)
 
 			err := service.DeleteChat(tt.args.ctx, tt.args.req)
