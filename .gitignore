@@ -24,3 +24,4 @@ go.work
 go.work.sum
 .vscode
 .docker-compose.yaml
+/coverage.out

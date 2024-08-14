@@ -4,6 +4,7 @@ package chat_v1;
 
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "validate/validate.proto";
 
 option go_package = "github.com/Prrromanssss/chat-server/pkg/chat_v1;chat_v1";
 
@@ -14,7 +15,10 @@ service ChatV1 {
 }
 
 message CreateRequest {
-    repeated string emails = 1;
+    repeated string emails = 1 [
+        (validate.rules).repeated = {min_items: 1},
+        (validate.rules).string = {email: true}
+    ];
 }
 
 message CreateResponse {
@@ -22,11 +26,17 @@ message CreateResponse {
 }
 
 message DeleteRequest {
-    int64 id = 1;
+    int64 id = 1 [
+        (validate.rules).int64 = {gt: 0}
+    ];
 }
 
 message SendMessageRequest {
-    string from = 1;
-    string text = 2;
+    string from = 1 [
+        (validate.rules).string = {min_len: 1, email: true}
+    ];
+    string text = 2 [
+        (validate.rules).string = {min_len: 1}
+    ];
     google.protobuf.Timestamp timestamp = 3;
 }
