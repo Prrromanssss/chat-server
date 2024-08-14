@@ -21,9 +21,12 @@ generate:
 generate-chat-api:
 	mkdir -p app/pkg/chat_v1
 	protoc --proto_path app/api/chat_v1 \
-	--go_out=app/pkg/chat_v1 --go_opt=paths=source_relative \
+	--proto_path app/vendor.protogen  \
+	--go_out=app/pkg/chat_v1 \
+	--go_opt=paths=source_relative \
 	--plugin=protoc-gen-go=app/bin/protoc-gen-go \
-	--go-grpc_out=app/pkg/chat_v1 --go-grpc_opt=paths=source_relative \
+	--go-grpc_out=app/pkg/chat_v1 \
+	--go-grpc_opt=paths=source_relative \
 	--plugin=protoc-gen-go-grpc=app/bin/protoc-gen-go-grpc \
 	--validate_out lang=go:app/pkg/chat_v1 \
 	--validate_opt=paths=source_relative \

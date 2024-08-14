@@ -15,10 +15,15 @@ service ChatV1 {
 }
 
 message CreateRequest {
-    repeated string emails = 1 [
-        (validate.rules).repeated = {min_items: 1},
-        (validate.rules).string = {email: true}
-    ];
+    repeated string emails = 1 [(validate.rules).repeated = {
+        min_items: 1,
+        unique: true,
+        items: {
+            string: {
+                email: true
+            }
+        }
+    }];
 }
 
 message CreateResponse {
