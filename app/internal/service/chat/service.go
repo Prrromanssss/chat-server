@@ -2,13 +2,12 @@ package chat
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
+	"github.com/Prrromanssss/platform_common/pkg/db"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/pkg/errors"
 
-	"github.com/Prrromanssss/chat-server/internal/client/db"
 	"github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	"github.com/Prrromanssss/chat-server/internal/service"
@@ -16,16 +15,19 @@ import (
 
 type chatService struct {
 	chatRepository repository.ChatRepository
+	logRepository  repository.LogRepository
 	txManager      db.TxManager
 }
 
 // NewService creates a new instance of chatService with the provided ChatRepository and TxManager.
 func NewService(
 	chatRepository repository.ChatRepository,
+	logRepository repository.LogRepository,
 	txManager db.TxManager,
 ) service.ChatService {
 	return &chatService{
 		chatRepository: chatRepository,
+		logRepository:  logRepository,
 		txManager:      txManager,
 	}
 }
@@ -65,22 +67,10 @@ func (s *chatService) CreateChat(
 			return txErr
 		}
 
-		requestData, txErr := json.Marshal(params)
-		if txErr != nil {
-			return txErr
-		}
-
-		responseData, txErr := json.Marshal(resp)
-		if txErr != nil {
-			return txErr
-		}
-
-		responseDataString := string(responseData)
-
-		txErr = s.chatRepository.CreateAPILog(ctx, model.CreateAPILogParams{
+		txErr = s.logRepository.CreateAPILog(ctx, model.CreateAPILogParams{
 			Method:       "Create",
-			RequestData:  string(requestData),
-			ResponseData: &responseDataString,
+			RequestData:  params,
+			ResponseData: resp,
 		})
 		if txErr != nil {
 			return txErr
@@ -89,8 +79,7 @@ func (s *chatService) CreateChat(
 		return nil
 	})
 	if err != nil {
-		err = errors.Wrapf(err, "Transaction failed")
-		return
+		return model.CreateChatResponse{}, errors.Wrapf(err, "Transaction failed")
 	}
 
 	return resp, nil
@@ -102,10 +91,7 @@ func (s *chatService) DeleteChat(ctx context.Context, params model.DeleteChatPar
 	log.Infof("chatService.DeleteChat, params: %v", params)
 
 	err = s.txManager.ReadCommitted(ctx, func(ctx context.Context) error {
-		var txErr error
-		var responseData *string
-
-		txErr = s.chatRepository.UnlinkParticipantsFromChat(ctx, model.UnlinkParticipantsFromChatParams(params))
+		txErr := s.chatRepository.UnlinkParticipantsFromChat(ctx, model.UnlinkParticipantsFromChatParams(params))
 		if txErr != nil {
 			return txErr
 		}
@@ -115,15 +101,9 @@ func (s *chatService) DeleteChat(ctx context.Context, params model.DeleteChatPar
 			return txErr
 		}
 
-		requestData, txErr := json.Marshal(params)
-		if txErr != nil {
-			return txErr
-		}
-
-		txErr = s.chatRepository.CreateAPILog(ctx, model.CreateAPILogParams{
-			Method:       "Delete",
-			RequestData:  string(requestData),
-			ResponseData: responseData,
+		txErr = s.logRepository.CreateAPILog(ctx, model.CreateAPILogParams{
+			Method:      "Delete",
+			RequestData: params,
 		})
 		if txErr != nil {
 			return txErr
@@ -145,23 +125,14 @@ func (s *chatService) SendMessage(ctx context.Context, params model.SendMessageP
 	log.Infof("chatService.SendMessage, params: %v", params)
 
 	err = s.txManager.ReadCommitted(ctx, func(ctx context.Context) error {
-		var txErr error
-		var responseData *string
-
-		txErr = s.chatRepository.SendMessage(ctx, params)
+		txErr := s.chatRepository.SendMessage(ctx, params)
 		if txErr != nil {
 			return txErr
 		}
 
-		requestData, txErr := json.Marshal(params)
-		if txErr != nil {
-			return txErr
-		}
-
-		txErr = s.chatRepository.CreateAPILog(ctx, model.CreateAPILogParams{
-			Method:       "SendMessage",
-			RequestData:  string(requestData),
-			ResponseData: responseData,
+		txErr = s.logRepository.CreateAPILog(ctx, model.CreateAPILogParams{
+			Method:      "SendMessage",
+			RequestData: params,
 		})
 		if txErr != nil {
 			return txErr

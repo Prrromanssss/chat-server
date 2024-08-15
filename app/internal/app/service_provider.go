@@ -4,16 +4,19 @@ import (
 	"context"
 	"log"
 
+	"github.com/Prrromanssss/platform_common/pkg/closer"
+	"github.com/Prrromanssss/platform_common/pkg/db"
+	"github.com/Prrromanssss/platform_common/pkg/db/pg"
+	"github.com/Prrromanssss/platform_common/pkg/db/transaction"
+
 	"github.com/Prrromanssss/chat-server/config"
 	chatAPI "github.com/Prrromanssss/chat-server/internal/api/grpc/chat"
-	"github.com/Prrromanssss/chat-server/internal/client/db"
-	"github.com/Prrromanssss/chat-server/internal/client/db/pg"
-	"github.com/Prrromanssss/chat-server/internal/client/db/transaction"
+
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	chatRepository "github.com/Prrromanssss/chat-server/internal/repository/chat"
+	logRepository "github.com/Prrromanssss/chat-server/internal/repository/log"
 	"github.com/Prrromanssss/chat-server/internal/service"
 	chatService "github.com/Prrromanssss/chat-server/internal/service/chat"
-	"github.com/Prrromanssss/chat-server/pkg/closer"
 )
 
 type serviceProvider struct {
@@ -23,8 +26,10 @@ type serviceProvider struct {
 	txManager db.TxManager
 
 	chatRepository repository.ChatRepository
-	chatService    service.ChatService
-	chatAPI        *chatAPI.GRPCHandlers
+	logRepository  repository.LogRepository
+
+	chatService service.ChatService
+	chatAPI     *chatAPI.GRPCHandlers
 }
 
 func newServiceProvider(cfg *config.Config) *serviceProvider {
@@ -60,10 +65,19 @@ func (s *serviceProvider) ChatRepository(ctx context.Context) repository.ChatRep
 	return s.chatRepository
 }
 
+func (s *serviceProvider) LogRepository(ctx context.Context) repository.LogRepository {
+	if s.logRepository == nil {
+		s.logRepository = logRepository.NewRepository(s.DBClient(ctx))
+	}
+
+	return s.logRepository
+}
+
 func (s *serviceProvider) ChatService(ctx context.Context) service.ChatService {
 	if s.chatService == nil {
 		s.chatService = chatService.NewService(
 			s.ChatRepository(ctx),
+			s.LogRepository(ctx),
 			s.TxManager(ctx),
 		)
 	}

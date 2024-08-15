@@ -1,8 +1,6 @@
 package converter
 
 import (
-	"database/sql"
-
 	"github.com/Prrromanssss/chat-server/internal/model"
 	modelRepo "github.com/Prrromanssss/chat-server/internal/repository/chat/model"
 )
@@ -63,23 +61,5 @@ func ConvertUnlinkParticipantsFromChatParamsFromServiceToRepo(params model.Unlin
 func ConvertDeleteChatParamsFromServiceToRepo(params model.DeleteChatParams) modelRepo.DeleteChatParams {
 	return modelRepo.DeleteChatParams{
 		ChatID: params.ChatID,
-	}
-}
-
-// ConvertCreateAPILogParamsFromServiceToRepo converts CreateAPILogParams from the service layer
-// to the repository layer format.
-func ConvertCreateAPILogParamsFromServiceToRepo(params model.CreateAPILogParams) modelRepo.CreateAPILogParams {
-	var responseData sql.NullString
-
-	if params.ResponseData != nil {
-		responseData = sql.NullString{String: *params.ResponseData, Valid: true}
-	} else {
-		responseData = sql.NullString{String: "", Valid: false}
-	}
-
-	return modelRepo.CreateAPILogParams{
-		Method:       params.Method,
-		RequestData:  params.RequestData,
-		ResponseData: responseData,
 	}
 }

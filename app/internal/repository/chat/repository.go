@@ -3,11 +3,11 @@ package chat
 import (
 	"context"
 
+	"github.com/Prrromanssss/platform_common/pkg/db"
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/jackc/pgx/v4"
 	"github.com/pkg/errors"
 
-	"github.com/Prrromanssss/chat-server/internal/client/db"
 	"github.com/Prrromanssss/chat-server/internal/model"
 	"github.com/Prrromanssss/chat-server/internal/repository"
 	"github.com/Prrromanssss/chat-server/internal/repository/chat/converter"
@@ -172,31 +172,6 @@ func (p *chatPGRepo) SendMessage(ctx context.Context, params model.SendMessagePa
 	if err != nil {
 		err = errors.Wrapf(err, "Cannot send message (from: %s)", paramsRepo.From)
 		return
-	}
-
-	return nil
-}
-
-// CreateAPILog creates log in database of every api action.
-func (p *chatPGRepo) CreateAPILog(
-	ctx context.Context,
-	params model.CreateAPILogParams,
-) (err error) {
-	log.Infof("chatPGRepo.CreateAPILog, params: %+v", params)
-
-	paramsRepo := converter.ConvertCreateAPILogParamsFromServiceToRepo(params)
-
-	q := db.Query{
-		Name:     "chatPGRepo.CreateAPILog",
-		QueryRaw: queryCreateAPILog,
-	}
-
-	_, err = p.db.DB().ExecContext(ctx, q, paramsRepo.Method, paramsRepo.RequestData, paramsRepo.ResponseData)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"Cannot create api log for chat",
-		)
 	}
 
 	return nil

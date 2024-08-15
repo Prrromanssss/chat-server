@@ -7,6 +7,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Prrromanssss/platform_common/pkg/closer"
+
 	"github.com/gofiber/fiber/v2/log"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -15,7 +17,6 @@ import (
 
 	"github.com/Prrromanssss/chat-server/config"
 	pb "github.com/Prrromanssss/chat-server/pkg/chat_v1"
-	"github.com/Prrromanssss/chat-server/pkg/closer"
 )
 
 type App struct {
