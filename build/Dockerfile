@@ -12,6 +12,6 @@ WORKDIR /root/
 
 COPY --from=builder /github.com/Prrromanssss/chat-server/source/bin/chat-server .
 
-ADD config.yaml /config.yaml
+ADD config/config.yaml /config.yaml
 
 CMD ["./chat-server"]

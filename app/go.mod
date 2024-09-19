@@ -6,6 +6,7 @@ require (
 	github.com/Prrromanssss/platform_common v0.0.5
 	github.com/brianvoe/gofakeit v3.18.0+incompatible
 	github.com/brianvoe/gofakeit/v6 v6.28.0
+	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gojuno/minimock/v3 v3.3.14
 	github.com/ilyakaznacheev/cleanenv v1.5.0
